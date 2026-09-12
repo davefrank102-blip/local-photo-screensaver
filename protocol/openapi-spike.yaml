@@ -1,0 +1,90 @@
+openapi: 3.0.3
+info:
+  title: Local Photo Screensaver — Phase 0 Spike API
+  version: 0.1.0
+  description: |
+    Minimal LAN HTTP API for the Phase 0 feasibility spike.
+    No authentication. Opaque image IDs only. Not a final protocol.
+servers:
+  - url: http://{host}:8787
+    variables:
+      host:
+        default: 192.168.1.10
+paths:
+  /api/v1/health:
+    get:
+      summary: Health / identity
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, serverId, serverName, apiVersions]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  serverId:
+                    type: string
+                  serverName:
+                    type: string
+                    example: Local Photo Spike
+                  apiVersions:
+                    type: array
+                    items:
+                      type: integer
+                    example: [1]
+  /api/v1/spike/playlist:
+    get:
+      summary: Shuffled stills playlist (capped)
+      responses:
+        '200':
+          description: Playlist
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [displaySeconds, transition, items]
+                properties:
+                  displaySeconds:
+                    type: integer
+                    example: 8
+                  transition:
+                    type: string
+                    example: fade
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, imageUrl, width, height]
+                      properties:
+                        id:
+                          type: string
+                          description: Opaque hex id (not a filesystem path)
+                        imageUrl:
+                          type: string
+                          example: /api/v1/images/0123abcd…
+                        width:
+                          type: integer
+                        height:
+                          type: integer
+  /api/v1/images/{id}:
+    get:
+      summary: Image bytes by opaque id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-f]{32}$'
+      responses:
+        '200':
+          description: JPEG or PNG bytes
+          content:
+            image/jpeg: {}
+            image/png: {}
+        '404':
+          description: Unknown or invalid id

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Phase 0: two Posters with opacity cross-fade; stills only -->
+<component name="ScreensaverScene" extends="Scene">
+  <script type="text/brightscript" uri="ScreensaverScene.brs" />
+  <children>
+    <Rectangle id="bg" width="1920" height="1080" color="0x101018FF" />
+    <Poster
+      id="posterA"
+      width="1920"
+      height="1080"
+      translation="[0,0]"
+      loadDisplayMode="scaleToFit"
+      loadSync="false"
+      opacity="1.0"
+    />
+    <Poster
+      id="posterB"
+      width="1920"
+      height="1080"
+      translation="[0,0]"
+      loadDisplayMode="scaleToFit"
+      loadSync="false"
+      opacity="0.0"
+    />
+    <Label
+      id="statusLabel"
+      width="1800"
+      height="80"
+      translation="[60,980]"
+      font="font:MediumBoldSystemFont"
+      color="0xCCCCCCFF"
+      text="Connecting…"
+    />
+    <Animation id="fadeToB" duration="1.0" easeFunction="inOutQuad" optional="true">
+      <FloatFieldInterpolator fieldToInterp="posterA.opacity" key="[0.0, 1.0]" keyValue="[1.0, 0.0]" />
+      <FloatFieldInterpolator fieldToInterp="posterB.opacity" key="[0.0, 1.0]" keyValue="[0.0, 1.0]" />
+    </Animation>
+    <Animation id="fadeToA" duration="1.0" easeFunction="inOutQuad" optional="true">
+      <FloatFieldInterpolator fieldToInterp="posterB.opacity" key="[0.0, 1.0]" keyValue="[1.0, 0.0]" />
+      <FloatFieldInterpolator fieldToInterp="posterA.opacity" key="[0.0, 1.0]" keyValue="[0.0, 1.0]" />
+    </Animation>
+  </children>
+</component>

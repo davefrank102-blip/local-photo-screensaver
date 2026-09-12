@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="SettingsScene" extends="Scene">
+  <script type="text/brightscript" uri="SettingsScene.brs" />
+  <children>
+    <Rectangle width="1920" height="1080" color="0x101018FF" />
+    <Label
+      id="title"
+      width="1600"
+      height="60"
+      translation="[160,120]"
+      font="font:LargeBoldSystemFont"
+      color="0xFFFFFFFF"
+      text="Local Photo Screensaver — Server IP"
+    />
+    <Label
+      id="hint"
+      width="1600"
+      height="80"
+      translation="[160,200]"
+      font="font:MediumSystemFont"
+      color="0xAAAAAAFF"
+      text="Enter the LAN IPv4 of the PC running photoserver (port 8787)."
+    />
+    <Label
+      id="current"
+      width="1600"
+      height="60"
+      translation="[160,300]"
+      font="font:MediumSystemFont"
+      color="0xCCCCCCFF"
+      text=""
+    />
+    <Keyboard
+      id="kb"
+      translation="[160,400]"
+    />
+  </children>
+</component>

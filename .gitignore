@@ -1,0 +1,13 @@
+# Binaries
+server/photoserver
+server/photoserver.exe
+*.exe
+*.zip
+
+# Local photos / IDE
+server/testdata/**
+!server/testdata/.gitkeep
+.idea/
+.vscode/
+*.swp
+.DS_Store
