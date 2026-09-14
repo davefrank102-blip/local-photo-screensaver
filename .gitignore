@@ -1,13 +1,28 @@
 # Binaries
-server/photoserver
-server/photoserver.exe
 *.exe
-*.zip
+*.dll
+*.so
+*.dylib
+photoserver
+photoserver-*
+*.test
 
-# Local photos / IDE
-server/testdata/**
-!server/testdata/.gitkeep
+# Local server state / caches
+photoserver-config.json
+photoserver-junk.json
+orient-cache/
+**/orient-cache/
+
+# Packaging
+*.zip
+!docs/**/*.zip
+
+# OS / editor
+.DS_Store
+Thumbs.db
 .idea/
 .vscode/
 *.swp
-.DS_Store
+
+# Go
+server/vendor/
