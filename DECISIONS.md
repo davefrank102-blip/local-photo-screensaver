@@ -1,35 +1,22 @@
-# Decisions — Phase 0
+# Decisions
 
-## Go for the companion server
+## Companion language: Go
+Single static Windows `.exe`, easy cross-compile, good HTTP + image libs.
 
-- Single static binary, easy Windows cross-compile (`GOOS=windows GOARCH=amd64`).
-- Stdlib `net/http` + `image` is enough for a spike (no framework).
-- Fast recursive scan and simple in-memory id→path map.
-
-## No authentication in the spike
-
-- Goal is feasibility (Roku ↔ LAN HTTP stills), not product hardening.
-- Documented LAN-trust-only model; pairing/tokens deferred to a later phase.
-- Default bind `0.0.0.0:8787` with explicit README/firewall warnings.
+## No auth on playlist/images (MVP)
+LAN trust + firewall. Admin UI is localhost-only. Auth/pairing is future work.
 
 ## Opaque image IDs
+Playlist exposes hashed IDs, not filesystem paths.
 
-- IDs are hex digests of the relative path (SHA-256 truncated), never raw paths.
-- Rejects non-hex IDs and `..` traversal on the image route.
-- Defense-in-depth: resolved file must remain under `--photos` root.
+## Roku: SceneGraph screensaver + settings tile
+`screensaver_title` + `RunScreenSaver` / `RunScreenSaverSettings`, plus `title` + `Main` so sideload shows a home tile for setup.
 
-## SceneGraph `rsg_version=1.3`
+## Playlist paging (50) + early prefetch
+Keep Roku memory light; fetch next page ~3 slides before batch end.
 
-- Widely available on modern Roku OS builds.
-- Two Poster nodes + opacity cross-fade keeps memory light (stills only).
+## EXIF auto-orient on serve
+Correct orientation server-side; cache under LocalAppData; cap long edge ~1920 for LAN.
 
-## Manifest: `screensaver_title` only
-
-- Screensaver packages must use `screensaver_title` (not channel `title`).
-- No `RunUserInterface` / channel Main UI — entry is `RunScreenSaver()` only.
-- Optional `RunScreenSaverSettings()` stores server host IP in the registry.
-
-## Spike playlist endpoint
-
-- `/api/v1/spike/playlist` is explicitly a temporary shape for the feasibility demo.
-- Cap + shuffle keep responses small for the Roku URL transfer path used in Phase 0.
+## Junk cleaner = heuristics first
+Filename / EXIF / aspect / mostly-white — exclude by default; optional delete. Local ML deferred.
