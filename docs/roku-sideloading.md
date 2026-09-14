@@ -1,65 +1,39 @@
-# Roku sideloading — Local Photo Screensaver (Phase 0)
+# Roku sideloading
 
-## Package layout
+## Package
 
-Zip the **contents** of `roku-app/` so that `manifest` is at the **root** of the archive:
+Zip the **contents** of `roku-app/` so the archive root contains `manifest`, `source/`, `components/`, `images/`.
 
-```
-manifest
-source/Main.brs
-components/ScreensaverScene.xml
-components/ScreensaverScene.brs
-components/SettingsScene.xml
-components/SettingsScene.brs
-images/…
-```
+**Wrong:** zipping the folder so the archive contains `roku-app/manifest`.
 
-**Wrong:** zipping the `roku-app` folder itself so the zip contains `roku-app/manifest`.
-
-### Zip on Windows (PowerShell)
+### PowerShell (forward-slash safe)
 
 ```powershell
-cd path\to\local-photo-screensaver\roku-app
-Compress-Archive -Path * -DestinationPath ..\local-photo-screensaver.zip -Force
-```
-
-### Zip on macOS / Linux
-
-```bash
 cd roku-app
-zip -r ../local-photo-screensaver.zip .
+# Prefer .NET ZipFile with '/' separators — Compress-Archive may use '\' and Roku rejects the package
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$dest = Join-Path (Split-Path (Get-Location)) 'local-photo-screensaver.zip'
+if (Test-Path $dest) { Remove-Item $dest -Force }
+$zip = [IO.Compression.ZipFile]::Open($dest, 'Create')
+Get-ChildItem -Recurse -File | ForEach-Object {
+  $rel = $_.FullName.Substring((Get-Location).Path.Length + 1).Replace('\','/')
+  [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $_.FullName, $rel)
+}
+$zip.Dispose()
 ```
 
-## Developer Mode on the Roku
+## Developer Mode
 
-1. On the Roku home screen, press **Home** three times, then **Up** twice, then **Right** once, then **Left** once, then **Right** once, then **Left** once, then **Right** once (classic secret sequence). Or use **Settings → System → Advanced system settings → Developer options** if already enabled.
-2. Enable **Developer Mode**; accept the EULA.
-3. Set a developer password when prompted.
-4. Note the Roku’s **IP address** shown on that screen (or under **Settings → Network → About**).
+Home ×3 → Up ×2 → Right → Left → Right → Left → Right → enable Developer Mode, set password, note IP.
 
-## Web installer
+## Install
 
-1. On a PC on the same LAN, open `http://<roku-ip>` in a browser.
-2. Log in with user `rokudev` and the developer password.
-3. Under **Install utility**, choose your `.zip` and **Upload**.
-4. The channel/screensaver package installs and may launch once.
+Browser → `http://<roku-ip>` → user `rokudev` → Upload zip (choose **zip**, not squashfs).
 
-## Set as system screensaver
+## Use
 
-1. Configure the server host IP via **screensaver settings** (`RunScreenSaverSettings`) — enter the PC LAN IP running `photoserver` on port `8787`.
-2. **Settings → Screensaver →** select **Local Photo Screensaver**.
-3. Optionally shorten wait time under screensaver settings for faster testing.
+1. Open the home-tile app once to confirm settings / set server IP  
+2. **Settings → Theme → Screensavers → Local Photo Screensaver → Set as screensaver**  
+3. **Change screensaver settings** to edit the PC IP  
 
-## Troubleshooting
-
-| Symptom | Check |
-|---------|--------|
-| “Connecting…” forever | PC firewall / wrong IP / server not running |
-| Playlist empty | `--photos` folder has JPEG/PNG; health endpoint OK |
-| Sideload rejected | `manifest` must be zip root; `screensaver_title` present; no channel `title`-only package |
-| Settings not saving | Registry write needs `flush()` (included); re-open settings |
-
-## Notes
-
-- Phase 0 uses synchronous `roUrlTransfer` for the small playlist JSON (spike simplicity).
-- Placeholder icons under `images/` are solid-color PNGs for packaging; replace for any public build.
+Screensavers do not appear as a normal channel after install if you only had `screensaver_title`; this package also includes a home tile for setup.
