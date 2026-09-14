@@ -10,7 +10,7 @@
       translation="[160,120]"
       font="font:LargeBoldSystemFont"
       color="0xFFFFFFFF"
-      text="Local Photo Screensaver — Server IP"
+      text="Local Photo Screensaver - Server IP"
     />
     <Label
       id="hint"

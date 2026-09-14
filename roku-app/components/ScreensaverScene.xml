@@ -29,7 +29,7 @@
       translation="[60,980]"
       font="font:MediumBoldSystemFont"
       color="0xCCCCCCFF"
-      text="Connecting…"
+      text="Loading..."
     />
     <Animation id="fadeToB" duration="1.0" easeFunction="inOutQuad" optional="true">
       <FloatFieldInterpolator fieldToInterp="posterA.opacity" key="[0.0, 1.0]" keyValue="[1.0, 0.0]" />
@@ -41,3 +41,4 @@
     </Animation>
   </children>
 </component>
+

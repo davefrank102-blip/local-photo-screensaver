@@ -1,16 +1,18 @@
 # Security
 
-## Phase 0 (spike)
+## Trust model (MVP)
 
-**There is no pairing, authentication, or TLS yet.**
+- **Admin UI** (`/`, `/api/v1/admin/*`): localhost only
+- **Playlist + images**: reachable on the LAN bind address with **no authentication**
+- Bind defaults to `0.0.0.0:8787` — restrict with Windows Firewall to your LAN profile
 
-- The companion server serves photo bytes to any client that can reach it on the LAN.
-- Treat `--addr` / port `8787` as **LAN-only**. Use a host firewall; do not port-forward to the internet.
-- Image URLs use **opaque IDs** (not filesystem paths). Path traversal on the ID is rejected.
-- Photos are read only from the `--photos` directory tree.
+## Recommendations
 
-Later phases are expected to add pairing, least-privilege binds, and stronger client verification. Until then: **LAN trust only**.
+1. Only run on a trusted home/LAN network
+2. Create an inbound allow rule for TCP 8787 limited to Private networks when possible
+3. Do not port-forward 8787 through your router
+4. Treat Delete in the junk UI as destructive (removes files from disk)
 
 ## Reporting
 
-This repository is private and experimental. If you find a security issue while collaborating, contact the repo owner directly.
+Open a GitHub issue describing the concern. Do not file auth-bypass reports against the intentional MVP LAN model unless admin localhost isolation fails.
