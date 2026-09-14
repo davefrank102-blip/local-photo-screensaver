@@ -34,3 +34,4 @@ sub writeHost(host as string)
   sec.write("serverHost", host)
   sec.flush()
 end sub
+
