@@ -1,23 +1,42 @@
-' Local Photo Screensaver — Phase 0
-' Screensaver packages must expose RunScreenSaver(); do NOT define RunUserInterface/Main channel UI.
+' Fetch first page on main thread only for host; scene loads playlist so status is visible.
+function loadServerHost() as string
+  sec = createObject("roRegistrySection", "LocalPhotoSpike")
+  if sec.exists("serverHost") then return sec.read("serverHost")
+  return "192.168.1.10"
+end function
 
-sub RunScreenSaver()
+sub Main()
   screen = createObject("roSGScreen")
   port = createObject("roMessagePort")
   screen.setMessagePort(port)
-  scene = screen.createScene("ScreensaverScene")
+  scene = screen.createScene("SettingsScene")
   screen.show()
-  ' Keep the screensaver alive until the platform dismisses it
   while true
     msg = wait(0, port)
-    msgType = type(msg)
-    if msgType = "roSGScreenEvent"
+    if type(msg) = "roSGScreenEvent"
       if msg.isScreenClosed() then return
     end if
   end while
 end sub
 
-' Optional settings entry: store LAN host IP in registry for the spike.
+sub RunScreenSaver()
+  host = loadServerHost()
+  baseUrl = "http://" + host + ":8787"
+  screen = createObject("roSGScreen")
+  port = createObject("roMessagePort")
+  screen.setMessagePort(port)
+  globals = screen.getGlobalNode()
+  globals.addFields({ serverHost: host, serverBase: baseUrl })
+  scene = screen.createScene("ScreensaverScene")
+  screen.show()
+  while true
+    msg = wait(0, port)
+    if type(msg) = "roSGScreenEvent"
+      if msg.isScreenClosed() then return
+    end if
+  end while
+end sub
+
 sub RunScreenSaverSettings()
   screen = createObject("roSGScreen")
   port = createObject("roMessagePort")
