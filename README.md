@@ -1,75 +1,78 @@
 # Local Photo Screensaver
 
-Privacy-first **Roku system screensaver** + **local companion server**. Photos stay on your LAN. No cloud, no accounts, no ads, no telemetry.
+Privacy-first **Roku screensaver** that shows photos from your own PC/NAS over your LAN. Photos never upload to the cloud.
 
-**Phase 0** is a feasibility spike only: prove that a Go server on your PC can feed still JPEG/PNG images to a sideloaded Roku screensaver over HTTP on the LAN.
+| Piece | What it is |
+| --- | --- |
+| `server/` | Go companion (`photoserver`) — indexes JPEG/PNG, serves playlist + images, local admin UI |
+| `roku-app/` | Sideloadable Roku SceneGraph screensaver |
+| `docs/` | Install, sideload, privacy, troubleshooting |
 
-## Mission
+**Status:** usable MVP (Windows companion + Roku sideload). Not a Roku Channel Store submission yet.
 
-- Photos never leave your local network.
-- Companion server runs on a machine you control.
-- Roku shows a fading slideshow using SceneGraph Posters (no video/audio).
+## Features
 
-## Repo layout
+- LAN-only photo serving (opaque image IDs; paths stay on the PC)
+- Admin UI on the PC (`http://127.0.0.1:8787/`) — pick folders/years, shuffle vs in-order, seconds per slide
+- Playlist paging (50 at a time, prefetch before batch end)
+- EXIF auto-orientation (+ resize ~1920px) with on-disk cache
+- Heuristic “junk” cleaner (screenshots/docs) — exclude by default, Keep / Delete in UI
+- Dual package: home-screen settings tile + system screensaver
 
-| Path | Purpose |
-|------|---------|
-| `server/` | Go companion (`photoserver`) |
-| `roku-app/` | Sideloadable Roku screensaver package |
-| `protocol/` | Minimal OpenAPI for the spike API |
-| `docs/` | Sideloading and ops notes |
+## Quick start (Windows)
 
-## Phase 0 — how to run
+### 1. Run the companion server
 
-### 1. Run the Go server (Windows)
-
-From `server/`:
-
-```bat
+```powershell
+cd server
 go build -o photoserver.exe ./cmd/photoserver
-photoserver.exe --photos "C:\Users\You\Pictures" --addr 0.0.0.0:8787
+.\photoserver.exe --addr 0.0.0.0:8787
 ```
 
-Cross-compile from Linux/macOS:
+Or cross-compile from Linux/macOS:
 
 ```bash
 cd server
 GOOS=windows GOARCH=amd64 go build -o photoserver.exe ./cmd/photoserver
 ```
 
-- `--photos` is **required** — point at a folder of JPEG/PNG (scanned recursively).
-- `--addr` defaults to `0.0.0.0:8787` (all interfaces). **Restrict to your LAN** with OS firewall; Phase 0 has **no authentication**. Prefer binding carefully and never expose this port to the public internet.
-- Health check: `http://127.0.0.1:8787/api/v1/health`
-- Playlist: `http://127.0.0.1:8787/api/v1/spike/playlist`
+Open **http://127.0.0.1:8787/** on the same PC:
 
-Do not commit large photo binaries. Use your own folder; `server/testdata/` is only a placeholder.
+1. Pick photo folders / year folders
+2. Note your PC’s LAN IP (e.g. from `ipconfig`)
+3. Allow inbound **TCP 8787** in Windows Firewall for Private/Public as needed
+
+Optional seed folder:
+
+```powershell
+.\photoserver.exe --photos "D:\Photos" --addr 0.0.0.0:8787
+```
 
 ### 2. Sideload the Roku app
 
-See [`docs/roku-sideloading.md`](docs/roku-sideloading.md). Summary:
+Zip the **contents** of `roku-app/` so `manifest` is at the zip root (not a nested `roku-app/` folder). See [docs/roku-sideloading.md](docs/roku-sideloading.md).
 
-1. Enable **Developer Mode** on the Roku.
-2. Zip the contents of `roku-app/` (manifest at zip root — not a parent folder).
-3. Upload via the Roku web installer (`http://<roku-ip>`).
+1. Enable Developer Mode on the Roku
+2. Open `http://<roku-ip>` → upload the zip (compression: zip)
+3. Settings → Theme → Screensavers → set **Local Photo Screensaver**
+4. Screensaver settings → enter the **PC LAN IP** (port `8787` is implied)
 
-### 3. Configure server IP + set as screensaver
+## Privacy model
 
-1. Open the sideloaded channel’s **screensaver settings** (or channel settings) and enter your PC’s LAN IPv4 (registry key `LocalPhotoSpike` / `serverHost`). Default fallback in code: `192.168.1.10`.
-2. On the Roku: **Settings → Screensaver →** pick **Local Photo Screensaver**.
-3. Ensure the PC server is running and the Roku can reach `http://<pc-ip>:8787`.
+- Photos stay on your machine; only playlist metadata and image bytes go to devices on your LAN
+- Admin / folder-picker APIs are **localhost-only**
+- Playlist and image APIs are **unauthenticated** in this MVP — treat your Wi‑Fi as the trust boundary (firewall recommended)
+- Details: [docs/privacy.md](docs/privacy.md), [SECURITY.md](SECURITY.md)
 
-## Phase 0 limitations
+## Repo layout
 
-- No pairing / auth — anyone on the LAN who can reach the port can fetch images.
-- Manual IP entry (no mDNS discovery yet).
-- JPEG/PNG only; playlist capped (~50); shuffle in memory at request time.
-- Opaque image IDs (hex hashes) — never raw filesystem paths.
-- Spike API under `/api/v1/spike/…` — not a final protocol.
+```
+server/cmd/photoserver/   # companion server
+roku-app/                 # Roku package sources
+docs/                     # human docs
+protocol/                 # API notes
+```
 
 ## License
 
-Apache-2.0 — see [`LICENSE`](LICENSE).
-
-## Security
-
-See [`SECURITY.md`](SECURITY.md). Spike trusts the LAN only.
+Apache-2.0 — see [LICENSE](LICENSE).
