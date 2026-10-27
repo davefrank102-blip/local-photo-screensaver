@@ -26,6 +26,11 @@ Flags:
 |------|---------|--------|
 | `--photos` | _(required)_ | Root directory; recursive JPEG/PNG only |
 | `--addr` | `0.0.0.0:8787` | **LAN-only** — firewall this; no auth in Phase 0 |
+| `--cache-max-mb` | `1024` (or `LPS_CACHE_MAX_MB`) | Size cap for the oriented-image cache; least-recently-used files are evicted first. `0` = unlimited |
+
+### Oriented-image cache
+
+Resized/auto-rotated JPEGs are cached in `%LOCALAPPDATA%\LocalPhotoScreensaver\orient-cache`. On startup the server deletes entries for photos no longer in the library (or whose file changed) and leftover temp files, then enforces the size cap and logs how much it freed. The cap is re-checked every 5 minutes and after every 50 new cache writes, in the background.
 
 ## Endpoints
 
