@@ -5,6 +5,8 @@
 *.dylib
 photoserver
 photoserver-*
+# ...but not the Go source package directory
+!server/cmd/photoserver/
 *.test
 
 # Local server state / caches

@@ -65,12 +65,14 @@ type server struct {
 	excluded       map[string]bool
 	kept           map[string]bool
 	junkFlags      map[string]junkFlag
+	cache          *orientCache
 }
 
 func main() {
 	addr := flag.String("addr", defaultAddr, "listen address")
 	photos := flag.String("photos", "", "optional initial photo directory")
 	configPath := flag.String("config", "", "path to JSON config")
+	cacheMaxMB := flag.Int64("cache-max-mb", defaultCacheMaxMBFromEnv(), "orient-cache size cap in MB (0 = unlimited; env "+cacheMaxEnv+")")
 	flag.Parse()
 
 	cfgPath := strings.TrimSpace(*configPath)
@@ -88,6 +90,7 @@ func main() {
 		excluded:       map[string]bool{},
 		kept:           map[string]bool{},
 		junkFlags:      map[string]junkFlag{},
+		cache:          newOrientCache(orientCacheDir(), *cacheMaxMB*1024*1024),
 	}
 	s.loadJunk()
 
@@ -113,11 +116,41 @@ func main() {
 	}
 
 	s.applyConfig(cfg)
-	if n, err := s.rescan(); err != nil {
-		log.Printf("initial scan: %v", err)
+	n, scanErr := s.rescan()
+	if scanErr != nil {
+		log.Printf("initial scan: %v", scanErr)
 	} else {
 		log.Printf("scanned %d JPEG/PNG across %d root(s)", n, len(s.roots))
 	}
+	// Only trust the index for stale-entry cleanup when the scan succeeded and
+	// every configured root was reachable (an offline drive must not wipe its
+	// photos' cache entries).
+	var lib map[string]string
+	s.mu.RLock()
+	if scanErr == nil && n > 0 && len(s.roots) > 0 && len(s.roots) == len(cfg.Roots) {
+		lib = make(map[string]string, len(s.byID))
+		for id, m := range s.byID {
+			lib[id] = m.Path
+		}
+	}
+	s.mu.RUnlock()
+	go func() {
+		start := time.Now()
+		stale, temp, evicted := s.cache.startupSweep(lib)
+		total := stale.bytes + temp.bytes + evicted.bytes
+		staleNote := ""
+		if lib == nil {
+			staleNote = " (stale check skipped: library index unavailable)"
+		}
+		capNote := "unlimited"
+		if s.cache.maxBytes > 0 {
+			capNote = humanBytes(s.cache.maxBytes)
+		}
+		log.Printf("orient-cache startup cleanup: freed %s — %d stale (%s)%s, %d temp (%s), %d LRU-evicted (%s); cap %s; %s; took %s",
+			humanBytes(total), stale.files, humanBytes(stale.bytes), staleNote, temp.files, humanBytes(temp.bytes),
+			evicted.files, humanBytes(evicted.bytes), capNote, s.cache.dir, time.Since(start).Round(time.Millisecond))
+		s.cache.run()
+	}()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleHome)
@@ -501,8 +534,9 @@ func (s *server) handleImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cachePath := orientedCachePath(id, info.ModTime().UnixNano(), info.Size())
+	cachePath := s.cache.path(id, info.ModTime().UnixNano(), info.Size())
 	if b, err := os.ReadFile(cachePath); err == nil && len(b) > 0 {
+		s.cache.touch(cachePath)
 		w.Header().Set("Content-Type", "image/jpeg")
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		_, _ = w.Write(b)
@@ -536,27 +570,13 @@ func (s *server) handleImage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "encode failed", http.StatusInternalServerError)
 		return
 	}
-	_ = os.MkdirAll(filepath.Dir(cachePath), 0o755)
-	_ = os.WriteFile(cachePath, buf.Bytes(), 0o644)
+	if err := s.cache.write(cachePath, buf.Bytes()); err != nil {
+		log.Printf("orient cache write %s: %v", id, err)
+	}
 
 	w.Header().Set("Content-Type", "image/jpeg")
 	w.Header().Set("Cache-Control", "public, max-age=86400")
 	_, _ = w.Write(buf.Bytes())
-}
-
-func orientedCachePath(id string, modNano, size int64) string {
-	base := os.Getenv("LOCALAPPDATA")
-	if base == "" {
-		if runtime.GOOS == "windows" {
-			base = filepath.Join(os.Getenv("USERPROFILE"), "AppData", "Local")
-		} else {
-			base, _ = os.UserHomeDir()
-			base = filepath.Join(base, ".cache")
-		}
-	}
-	dir := filepath.Join(base, "LocalPhotoScreensaver", "orient-cache")
-	name := fmt.Sprintf("%s_%d_%d.jpg", id, modNano, size)
-	return filepath.Join(dir, name)
 }
 
 func underAnyRoot(roots []string, path string) bool {
